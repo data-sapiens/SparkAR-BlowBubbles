@@ -8,12 +8,9 @@ const Instruction = require('Instruction');
 const R = require('Reactive');
 const CameraInfo = require('CameraInfo');
 
-import { bubbleAlpha, gridPulse } from './shaders';
-import { delay } from './helpers';
-import { Overlay } from './overlay';
+import { bubbleAlpha } from './shaders';
 
 const THRESHOLD_BLOW = 0.90;
-const CALIBRATION_TIME = 3000;
 
 const Filter = {
   isLoaded: false,
@@ -24,8 +21,6 @@ const Filter = {
   objEmmiter: null,
   matBubble: null,
   texCamera: null,
-  overlay: null,
-  actionFloorTap: null,
 
   init(assets = []) {
     Promise.all(assets).then(assets => this.onLoad(assets));
@@ -42,29 +37,17 @@ const Filter = {
     this.objEmmiter = assets[2];
     this.matBubble = assets[4];
     this.texCamera = assets[5];
-    this.overlay = new Overlay(assets[7]);
-    this.matFloorTap = assets[8];
 
     this.setupEmitter();
     this.setupMatBubble();
-    this.setupMatFloorTap();
 
     this.setCameraPosition()
-    .then(() => this.calibrate())
-    .then(() => this.initPlaneTracker())
-    .then(() => this.overlay.fadeOut(300))
     .then(() => {
-      this.overlay.hidden = true;
+      this.nullPositioner.transform.scaleX = R.div(1, this.trackerPlane.worldTransform.scaleX);
+      this.nullPositioner.transform.scaleY = R.div(1, this.trackerPlane.worldTransform.scaleY);
+      this.nullPositioner.transform.scaleZ = R.div(1, this.trackerPlane.worldTransform.scaleZ);
       Instruction.bind(CameraInfo.isRecordingVideo.not(), 'press_to_launch');
     });
-  },
-
-  setupMatFloorTap() {
-    const grid = gridPulse();
-    this.actionFloorTap = () => {
-      grid.pulse();
-    };
-    this.matFloorTap.setTextureSlot('DIFFUSE', grid.texture);
   },
 
   setupEmitter() {
@@ -80,23 +63,6 @@ const Filter = {
     this.matBubble.setTextureSlot('DIFFUSE', bubbleAlpha(this.texCamera.signal));
   },
 
-  initPlaneTracker() {
-    return new Promise(resolve => {
-      Touch.onTap().subscribe(evt => {
-        this.trackerPlane.trackPoint(evt.location);
-        Instruction.bind(false, 'tap_to_place_on_surface');
-        this.actionFloorTap();
-        resolve();
-      });
-      
-      this.nullPositioner.transform.scaleX = R.div(1, this.trackerPlane.worldTransform.scaleX);
-      this.nullPositioner.transform.scaleY = R.div(1, this.trackerPlane.worldTransform.scaleY);
-      this.nullPositioner.transform.scaleZ = R.div(1, this.trackerPlane.worldTransform.scaleZ);
-
-      Instruction.bind(true, 'tap_to_place_on_surface');
-    });
-  },
-
   setCameraPosition() {
     const isCameraBack = CameraInfo.captureDevicePosition.eq('BACK');
     Instruction.bind(isCameraBack.not(), 'flip_camera');
@@ -107,17 +73,6 @@ const Filter = {
           subscription.unsubscribe();
           resolve();
         }
-      });
-    });
-  },
-
-  calibrate() {
-    return new Promise(resolve => {
-      Instruction.bind(true, 'look_around');
-      // TODO: detect rotation status here? 
-      delay(CALIBRATION_TIME).then(() => {
-        Instruction.bind(false, 'look_around');
-        resolve();
       });
     });
   }
@@ -131,7 +86,5 @@ Filter.init([
     Scene.root.findFirst('planeTracker0'),
     Mat.findFirst('matBubble'),
     Tex.findFirst('texCamera'),
-    Scene.root.findFirst('nullPositioner'),
-    Mat.findFirst('matOverlay'),
-    Mat.findFirst('matFloorTap'),
+    Scene.root.findFirst('nullPositioner')
 ]);

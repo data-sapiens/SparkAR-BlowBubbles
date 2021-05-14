@@ -147,38 +147,6 @@ export function blendLighten(base, blend) {
 	return R.max(base, blend);
 }
 
-export function gridPulse(ms = 500, size = 80) {
-	const inDriver = Animation.timeDriver({
-	  durationMilliseconds: ms,
-	  loopCount: 1,
-	  mirror: false
-	});
-
-	const outDriver = Animation.timeDriver({
-	  durationMilliseconds: ms,
-	  loopCount: 1,
-	  mirror: false
-	});
-
-	const grid = createGrid(size);
-	const inCircle = R.step(0, S.sdfEllipse(R.pack2(0.5,0.5), Animation.animate(inDriver, Animation.samplers.linear(0, 1))));
-	const outCircle = R.step(0, S.sdfEllipse(R.pack2(0.5,0.5), Animation.animate(outDriver, Animation.samplers.linear(0, 1))));
-	return {
-		texture: R.step(0, S.sdfEllipse(R.pack2(0.5,0.5), 0.5)).mul(grid.mul(inCircle.sub(outCircle))),
-		pulse: () => {
-			outDriver.reset();
-			inDriver.reset();
-
-
-			Time.setTimeout(() => {
-				outDriver.start();
-			}, ms / 1.75);
-
-			inDriver.start();
-		}
-	}
-}
-
 export function shuffleArray([...arr]) {
 	let m = arr.length;
 	
